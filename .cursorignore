@@ -1,0 +1,21 @@
+# Секреты и переменные окружения — НИКОГДА не должны попадать в контекст модели
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Зависимости и билды — не нужны агенту, только замусоривают контекст
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Служебные файлы
+.DS_Store
+*.log
+
+# Supabase локальные файлы (если будешь использовать Supabase CLI)
+supabase/.branches
+supabase/.temp
