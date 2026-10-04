@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
+
+type FormError = { key: TranslationKey } | { raw: string };
 
 export default function RecipesForm() {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FormError | null>(null);
 
   async function handleGenerate() {
     setLoading(true);
@@ -26,7 +31,13 @@ export default function RecipesForm() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? "Не удалось составить рецепт");
+      if (res.status === 401) {
+        setError({ key: "recipes.errorUnauthorized" });
+      } else if (data.error) {
+        setError({ raw: String(data.error) });
+      } else {
+        setError({ key: "recipes.errorGeneric" });
+      }
       setLoading(false);
       return;
     }
@@ -36,16 +47,16 @@ export default function RecipesForm() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Рецепты</h1>
-      <p className="mb-6 text-text-secondary">
-        Что у тебя есть? Через запятую (например: курица, рис, помидоры)
-      </p>
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">
+        {t("recipes.title")}
+      </h1>
+      <p className="mb-6 text-text-secondary">{t("recipes.subtitle")}</p>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="курица, рис, помидоры"
+          placeholder={t("recipes.placeholder")}
           className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-text-primary outline-none transition-colors duration-200 placeholder:text-text-secondary focus:border-accent"
         />
         <button
@@ -53,13 +64,13 @@ export default function RecipesForm() {
           disabled={loading}
           className="shrink-0 rounded-lg bg-accent px-5 py-2.5 font-medium text-background transition-colors duration-200 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Генерирую..." : "Составить рецепт"}
+          {loading ? t("recipes.generating") : t("recipes.generate")}
         </button>
       </div>
 
       {error && (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-red-400">
-          {error}
+          {"key" in error ? t(error.key) : error.raw}
         </p>
       )}
 
@@ -71,7 +82,7 @@ export default function RecipesForm() {
           )}
 
           <h3 className="mt-6 mb-3 text-sm font-medium uppercase tracking-wide text-text-secondary">
-            Ингредиенты
+            {t("recipes.ingredients")}
           </h3>
           <ul className="space-y-2">
             {recipe.ingredients_json?.map((ing: any, i: number) => (
@@ -79,14 +90,14 @@ export default function RecipesForm() {
                 <span>{ing.name}</span>
                 <span className="text-text-secondary">
                   {ing.amount}
-                  {!ing.have_it && " · докупить"}
+                  {!ing.have_it && ` · ${t("recipes.toBuy")}`}
                 </span>
               </li>
             ))}
           </ul>
 
           <h3 className="mt-6 mb-3 text-sm font-medium uppercase tracking-wide text-text-secondary">
-            Шаги
+            {t("recipes.steps")}
           </h3>
           <ol className="space-y-4">
             {recipe.steps_json?.map((step: any, i: number) => (
@@ -98,7 +109,8 @@ export default function RecipesForm() {
                   <p className="font-medium">{step.title}</p>
                   <p className="mt-1 text-sm text-text-secondary">
                     {step.instruction}
-                    {step.time_minutes != null && ` (~${step.time_minutes} мин)`}
+                    {step.time_minutes != null &&
+                      ` (~${step.time_minutes} ${t("recipes.minutesShort")})`}
                   </p>
                 </div>
               </li>

@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import Header from "@/components/Header";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -10,7 +11,7 @@ const inter = Inter({
 
 export const metadata = {
   title: "Routine",
-  description: "Акции и рецепты — в одном месте",
+  description: "Deals and recipes — all in one place",
   manifest: "/manifest.json",
 };
 
@@ -29,10 +30,12 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <html lang="ru">
+    <html lang="en">
       <body className={inter.className}>
-        <Header email={user?.email ?? null} />
-        <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        <LanguageProvider>
+          <Header email={user?.email ?? null} />
+          <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        </LanguageProvider>
       </body>
     </html>
   );

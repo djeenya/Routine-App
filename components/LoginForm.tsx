@@ -2,41 +2,46 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
-function mapAuthError(message: string) {
+type FormError = { key: TranslationKey } | { raw: string };
+
+function mapAuthError(message: string): FormError {
   const text = message.toLowerCase();
   if (text.includes("invalid login credentials")) {
-    return "Неверный email или пароль";
+    return { key: "login.errorInvalidCredentials" };
   }
   if (text.includes("user already registered") || text.includes("already registered")) {
-    return "Этот email уже занят";
+    return { key: "login.errorEmailTaken" };
   }
   if (text.includes("password should be") || text.includes("password is known")) {
-    return "Пароль слишком короткий (минимум 6 символов)";
+    return { key: "login.errorPasswordShort" };
   }
   if (text.includes("unable to validate email") || text.includes("invalid email")) {
-    return "Некорректный email";
+    return { key: "login.errorInvalidEmail" };
   }
   if (text.includes("email not confirmed")) {
-    return "Email ещё не подтверждён. Проверьте почту.";
+    return { key: "login.errorEmailNotConfirmed" };
   }
-  return message;
+  return { raw: message };
 }
 
 export default function LoginForm() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [error, setError] = useState<FormError | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
+    setAccountCreated(false);
     setLoading(true);
 
     const supabase = createClient();
@@ -66,7 +71,7 @@ export default function LoginForm() {
       return;
     }
     if (!data.session) {
-      setInfo("Аккаунт создан. Проверьте почту, чтобы подтвердить email.");
+      setAccountCreated(true);
       setLoading(false);
       return;
     }
@@ -77,12 +82,12 @@ export default function LoginForm() {
   return (
     <div className="mx-auto max-w-md">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">
-        {mode === "signin" ? "Войти" : "Регистрация"}
+        {mode === "signin" ? t("login.signInTitle") : t("login.signUpTitle")}
       </h1>
       <p className="mb-6 text-text-secondary">
         {mode === "signin"
-          ? "Войдите, чтобы составлять рецепты."
-          : "Создайте аккаунт, чтобы сохранять рецепты."}
+          ? t("login.signInSubtitle")
+          : t("login.signUpSubtitle")}
       </p>
 
       <div className="mb-6 grid grid-cols-2 rounded-lg border border-border bg-surface p-1">
@@ -91,7 +96,7 @@ export default function LoginForm() {
           onClick={() => {
             setMode("signin");
             setError(null);
-            setInfo(null);
+            setAccountCreated(false);
           }}
           className={`rounded-md py-2 text-sm font-medium transition-colors duration-200 ${
             mode === "signin"
@@ -99,14 +104,14 @@ export default function LoginForm() {
               : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Войти
+          {t("login.tabSignIn")}
         </button>
         <button
           type="button"
           onClick={() => {
             setMode("signup");
             setError(null);
-            setInfo(null);
+            setAccountCreated(false);
           }}
           className={`rounded-md py-2 text-sm font-medium transition-colors duration-200 ${
             mode === "signup"
@@ -114,7 +119,7 @@ export default function LoginForm() {
               : "text-text-secondary hover:text-text-primary"
           }`}
         >
-          Зарегистрироваться
+          {t("login.tabSignUp")}
         </button>
       </div>
 
@@ -125,7 +130,7 @@ export default function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
+          placeholder={t("login.emailPlaceholder")}
           className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-text-primary outline-none transition-colors duration-200 placeholder:text-text-secondary focus:border-accent"
         />
         <input
@@ -135,17 +140,17 @@ export default function LoginForm() {
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Пароль"
+          placeholder={t("login.passwordPlaceholder")}
           className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-text-primary outline-none transition-colors duration-200 placeholder:text-text-secondary focus:border-accent"
         />
         {error && (
           <p className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-red-400">
-            {error}
+            {"key" in error ? t(error.key) : error.raw}
           </p>
         )}
-        {info && (
+        {accountCreated && (
           <p className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-accent">
-            {info}
+            {t("login.accountCreated")}
           </p>
         )}
         <button
@@ -154,10 +159,10 @@ export default function LoginForm() {
           className="mt-1 rounded-lg bg-accent px-5 py-2.5 font-medium text-background transition-colors duration-200 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading
-            ? "Подождите..."
+            ? t("login.loading")
             : mode === "signin"
-              ? "Войти"
-              : "Создать аккаунт"}
+              ? t("login.submitSignIn")
+              : t("login.submitSignUp")}
         </button>
       </form>
     </div>
