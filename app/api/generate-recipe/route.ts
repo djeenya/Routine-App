@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { generateRecipe, hashIngredients } from "@/lib/generateRecipe";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/dictionaries";
 
-// POST { products: string[], strictMode?: boolean }
+// POST { products: string[], strictMode?: boolean, language?: 'en' | 'de' | 'ru' }
 export async function POST(req: NextRequest) {
   try {
     const authClient = createClient();
@@ -15,7 +16,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Нужна авторизация" }, { status: 401 });
     }
 
-    const { products, strictMode = true } = await req.json();
+    const body = await req.json();
+    const { products, strictMode = true } = body;
+    const language: Locale = isLocale(body.language)
+      ? body.language
+      : DEFAULT_LOCALE;
 
     if (!products?.length) {
       return NextResponse.json(
@@ -26,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const userId = user.id;
     const supabase = getServiceSupabase();
-    const ingredientsHash = hashIngredients(products);
+    const ingredientsHash = hashIngredients(products, language);
 
     // 1. Проверяем кэш — вдруг такой набор продуктов уже кто-то генерировал
     const { data: cached } = await supabase
@@ -43,7 +48,8 @@ export async function POST(req: NextRequest) {
     // 2. Генерируем через Claude API
     const recipe = await generateRecipe(
       products.map((name: string) => ({ name })),
-      strictMode
+      strictMode,
+      language
     );
 
     // 3. Сохраняем в БД для будущего кэша

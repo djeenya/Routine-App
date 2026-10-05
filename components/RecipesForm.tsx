@@ -7,7 +7,7 @@ import type { TranslationKey } from "@/lib/i18n/dictionaries";
 type FormError = { key: TranslationKey } | { raw: string };
 
 export default function RecipesForm() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
@@ -27,6 +27,7 @@ export default function RecipesForm() {
       body: JSON.stringify({
         products,
         strictMode: true,
+        language: locale,
       }),
     });
     const data = await res.json();
